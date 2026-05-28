@@ -41,15 +41,40 @@ jobs:
 
     - name: Install dependencies
       run: npm ci
+      
+    - name: List dependencies
+      run: npm list
 
     - name: Build TypeScript
       run: npm run build
 
+    - name: Verify build output
+      run: ls -la dist/
+
+    - name: Create build directory
+      run: mkdir -p build
+
     - name: Create pkg cache directory
       run: mkdir -p .pkg-cache
+
+    - name: Check pkg version
+      run: npx pkg --version
+
+    - name: Set PKG_CACHE_PATH (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: echo "PKG_CACHE_PATH=$(pwd)/.pkg-cache" >> $GITHUB_ENV
+      
+    - name: Set PKG_CACHE_PATH (Windows)
+      if: runner.os == 'Windows'
+      run: echo "PKG_CACHE_PATH=$(pwd)/.pkg-cache" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       
     - name: Package for ${{ matrix.target }}
-      run: PKG_CACHE_PATH=$(pwd)/.pkg-cache npx pkg . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
+      run: |
+        echo "PKG_CACHE_PATH=$PKG_CACHE_PATH"
+        npx pkg . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }} --debug
+
+    - name: Verify package output
+      run: ls -la build/
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
