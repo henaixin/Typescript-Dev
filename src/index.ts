@@ -36,9 +36,23 @@ function formatInfo(info: PlatformInfo): string {
 `;
 }
 
-function main() {
+function waitForEnter(): Promise<void> {
+  return new Promise((resolve) => {
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.once('data', () => {
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      resolve();
+    });
+  });
+}
+
+async function main() {
   const info = getPlatformInfo();
   console.log(formatInfo(info));
+  console.log('Press Enter to exit...');
+  await waitForEnter();
 }
 
 main();
