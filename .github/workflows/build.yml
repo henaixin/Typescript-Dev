@@ -1,0 +1,82 @@
+name: Build Multi-Platform Binaries
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+            pkg-target: node18-linux-x64
+            output: typescript-demo-linux-x64
+          - os: ubuntu-latest
+            target: linux-arm64
+            pkg-target: node18-linux-arm64
+            output: typescript-demo-linux-arm64
+          - os: windows-latest
+            target: win-x64
+            pkg-target: node18-win-x64
+            output: typescript-demo-win-x64.exe
+          - os: macos-latest
+            target: macos-arm64
+            pkg-target: node18-macos-arm64
+            output: typescript-demo-macos-arm64
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 18
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build TypeScript
+      run: npm run build
+
+    - name: Package for ${{ matrix.target }}
+      run: npx pkg . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-${{ matrix.target }}
+        path: build/${{ matrix.output }}
+        if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: build
+    
+    - name: List build files
+      run: ls -la build/
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          build/build-linux-x64/typescript-demo-linux-x64
+          build/build-linux-arm64/typescript-demo-linux-arm64
+          build/build-win-x64/typescript-demo-win-x64.exe
+          build/build-macos-arm64/typescript-demo-macos-arm64
+        generate_release_notes: true
