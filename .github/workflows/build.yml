@@ -56,14 +56,14 @@ jobs:
       run: |
         export PKG_CACHE_PATH=$(pwd)/.pkg-cache
         echo "PKG_CACHE_PATH=$PKG_CACHE_PATH"
-        npx pkg . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
+        npx pkg@latest . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
 
     - name: Package for ${{ matrix.target }} (Windows)
       if: runner.os == 'Windows'
       run: |
         $env:PKG_CACHE_PATH = "$(pwd)\.pkg-cache"
         Write-Host "PKG_CACHE_PATH=$env:PKG_CACHE_PATH"
-        npx pkg . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
+        npx pkg@latest . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
