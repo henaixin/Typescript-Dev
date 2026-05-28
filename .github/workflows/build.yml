@@ -45,8 +45,11 @@ jobs:
     - name: Build TypeScript
       run: npm run build
 
+    - name: Create pkg cache directory
+      run: mkdir -p .pkg-cache
+      
     - name: Package for ${{ matrix.target }}
-      run: npx pkg . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
+      run: PKG_CACHE_PATH=$(pwd)/.pkg-cache npx pkg . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
