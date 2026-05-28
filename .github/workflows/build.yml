@@ -53,8 +53,13 @@ jobs:
       if: runner.os == 'Windows'
       run: dir dist\
 
-    - name: Create directories
+    - name: Create directories (Linux/macOS)
+      if: runner.os != 'Windows'
       run: mkdir -p build .pkg-cache
+      
+    - name: Create directories (Windows)
+      if: runner.os == 'Windows'
+      run: New-Item -ItemType Directory -Path build, .pkg-cache -Force
 
     - name: Package for ${{ matrix.target }} (Linux/macOS)
       if: runner.os != 'Windows'
@@ -66,9 +71,9 @@ jobs:
     - name: Package for ${{ matrix.target }} (Windows)
       if: runner.os == 'Windows'
       run: |
-        $env:PKG_CACHE_PATH = "$(pwd)\.pkg-cache"
+        $env:PKG_CACHE_PATH = "$PWD\.pkg-cache"
         Write-Host "PKG_CACHE_PATH=$env:PKG_CACHE_PATH"
-        npx pkg@latest . --targets ${{ matrix.pkg-target }} --output build/${{ matrix.output }}
+        npx pkg@latest . --targets ${{ matrix.pkg-target }} --output "build\${{ matrix.output }}"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
