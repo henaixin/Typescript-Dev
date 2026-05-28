@@ -21,6 +21,12 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
 source ~/.bashrc  # 或者 source ~/.zshrc
 ```
 
+**Windows 用户**：
+
+1. 访问 [nvm-windows](https://github.com/coreybutler/nvm-windows/releases) 下载最新版本
+2. 运行安装程序（推荐使用 `nvm-setup.exe`）
+3. 安装完成后，重新打开命令提示符或 PowerShell
+
 安装 Node.js 最新 LTS 版本：
 
 ```bash
