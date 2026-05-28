@@ -45,8 +45,13 @@ jobs:
     - name: Build TypeScript
       run: npm run build
 
-    - name: Verify build output
+    - name: Verify build output (Linux/macOS)
+      if: runner.os != 'Windows'
       run: ls -la dist/
+      
+    - name: Verify build output (Windows)
+      if: runner.os == 'Windows'
+      run: dir dist\
 
     - name: Create directories
       run: mkdir -p build .pkg-cache
