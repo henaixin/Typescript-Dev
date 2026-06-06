@@ -2,12 +2,30 @@ name: Build Multi-Platform Binaries
 
 on:
   push:
-    branches: [ main, refresh-camera ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, refresh-camera ]
+    branches: [ main ]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ steps.filter.outputs.src }}
+      dockerfile: ${{ steps.filter.outputs.dockerfile }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          src:
+            - 'src/**'
+          dockerfile:
+            - 'Dockerfile'
+
   build:
+    needs: changes
+    if: needs.changes.outputs.src == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -81,6 +99,28 @@ jobs:
         name: build-${{ matrix.target }}
         path: build/${{ matrix.output }}
         if-no-files-found: error
+
+  docker:
+    needs: changes
+    if: needs.changes.outputs.dockerfile == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image (linux/amd64, linux/arm64)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: false
 
   release:
     needs: build
