@@ -36,6 +36,10 @@ async function main() {
     for (let i = 0; i < cameras.length; i++) {
       const cam = cameras[i];
       console.log(`\n[Progress] ${i + 1}/${cameras.length} - ${cam.name || cam.camera_id}`);
+      if (cam.online_status === 1) {
+        console.log('[Info] 摄像头已在线，跳过');
+        continue;
+      }
 
       try {
         await api.refreshCamera(cam.camera_id);
