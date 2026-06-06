@@ -45,7 +45,7 @@ else
 fi
 
 # 检查远程仓库
-echo "[1/5] 检查远程仓库..."
+echo "[1/6] 检查远程仓库..."
 REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
 if [ -z "$REMOTE_URL" ]; then
     echo "[错误] 未配置远程仓库 origin"
@@ -54,7 +54,7 @@ fi
 echo "      远程仓库: ${REMOTE_URL}"
 
 # 检查分支是否已存在
-echo "[2/5] 检查分支是否存在..."
+echo "[2/6] 检查分支是否存在..."
 if git show-ref --verify --quiet "refs/heads/${BRANCH_NAME}"; then
     echo "[错误] 本地分支 '${BRANCH_NAME}' 已存在"
     exit 1
@@ -66,22 +66,39 @@ fi
 echo "      分支名可用"
 
 # 创建并切换分支
-echo "[3/5] 创建并切换到新分支: ${BRANCH_NAME}"
+echo "[3/6] 创建并切换到新分支: ${BRANCH_NAME}"
 git checkout -b "${BRANCH_NAME}"
+
+# 自动更新 workflow 文件中的分支触发列表
+echo "[4/6] 更新 GitHub Actions workflow 分支触发列表..."
+WORKFLOW_FILE=".github/workflows/build.yml"
+if [ -f "${WORKFLOW_FILE}" ]; then
+    # 检查分支是否已在触发列表中
+    if grep -E "branches: \[.*${BRANCH_NAME}.*\]" "${WORKFLOW_FILE}" > /dev/null 2>&1; then
+        echo "      分支 '${BRANCH_NAME}' 已在 workflow 触发列表中，无需修改"
+    else
+        # 在 branches: [ xxx ] 列表末尾追加新分支名（兼容已有多个分支的情况）
+        # 注意: sed ERE 中 ] 不需要转义
+        sed -i -E "s/branches: \[ ([^]]*) \]/branches: [ \1, ${BRANCH_NAME} ]/g" "${WORKFLOW_FILE}"
+        echo "      已追加分支 '${BRANCH_NAME}' 到 ${WORKFLOW_FILE}"
+    fi
+else
+    echo "      未找到 ${WORKFLOW_FILE}，跳过"
+fi
 
 # 如果有更改则提交
 if [ "$CREATE_EMPTY" = false ]; then
-    echo "[4/5] 添加并提交所有更改..."
+    echo "[5/6] 添加并提交所有更改..."
     git add -A
     COMMIT_MSG="feat: refresh camera points (branch: ${BRANCH_NAME})"
     git commit -m "${COMMIT_MSG}"
     echo "      Commit 完成: ${COMMIT_MSG}"
 else
-    echo "[4/5] 跳过提交（工作区干净）"
+    echo "[5/6] 跳过提交（工作区干净）"
 fi
 
 # 推送到远程
-echo "[5/5] 推送到远程仓库..."
+echo "[6/6] 推送到远程仓库..."
 git push -u origin "${BRANCH_NAME}"
 
 echo ""

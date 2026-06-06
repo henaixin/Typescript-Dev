@@ -2,9 +2,9 @@ name: Build Multi-Platform Binaries
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, refresh-camame ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, refresh-camame ]
 
 jobs:
   build:
