@@ -51,7 +51,7 @@ function waitForEnter(): Promise<void> {
 async function main() {
   const info = getPlatformInfo();
   console.log(formatInfo(info));
-  console.log('Press Enter to exit...');
+  console.log('Press Enter to exit ...');
   await waitForEnter();
 }
 
