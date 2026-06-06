@@ -2,9 +2,9 @@ name: Build Multi-Platform Binaries
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, refresh-camera ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, refresh-camera ]
 
 jobs:
   changes:
