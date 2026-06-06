@@ -36,10 +36,8 @@ export interface CameraListResponse {
   msg?: string;
 }
 
-export interface RefreshResponse {
-  code?: number;
-  msg?: string;
-  data?: unknown;
+export interface RefreshResult {
+  [cameraId: string]: number;
 }
 
 export class CameraApi {
@@ -50,7 +48,7 @@ export class CameraApi {
     this.config = config;
   }
 
-  private async post<T>(url: string, body: unknown, auth = false): Promise<T> {
+  private buildHeaders(auth = false): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -58,10 +56,26 @@ export class CameraApi {
     if (auth && this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
+    return headers;
+  }
 
+  private async get<T>(url: string, auth = false): Promise<T> {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: this.buildHeaders(auth),
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    return (await res.json()) as T;
+  }
+
+  private async post<T>(url: string, body: unknown, auth = false): Promise<T> {
     const res = await fetch(url, {
       method: 'POST',
-      headers,
+      headers: this.buildHeaders(auth),
       body: JSON.stringify(body),
     });
 
@@ -91,7 +105,6 @@ export class CameraApi {
       throw new Error('认证接口未返回 token');
     }
 
-    // 如果 token 带有 userToken= 前缀，提取纯 token 值用于 Authorization
     if (token.startsWith('userToken=')) {
       token = token.slice('userToken='.length);
     }
@@ -105,22 +118,42 @@ export class CameraApi {
       throw new Error('未获取 Token，请先调用 authenticate()');
     }
 
-    const url = `${this.config.api.base_url}${this.config.api.list_endpoint}`;
-    const body = {
-      current: 1,
-      page_size: this.config.refresh.total_count,
-    };
+    const pageSize = this.config.refresh.total_count;
+    const allCameras: CameraItem[] = [];
+    let current = 1;
+    let total = 0;
 
     console.log('[List] 正在获取摄像头列表...');
-    const res = await this.post<CameraListResponse>(url, body, true);
 
-    if (res.code !== 0 && res.code !== undefined) {
-      throw new Error(`获取列表失败: ${res.msg || JSON.stringify(res)}`);
-    }
+    do {
+      const params = new URLSearchParams({
+        current: String(current),
+        page_size: String(pageSize),
+      });
+      const url = `${this.config.api.base_url}${this.config.api.list_endpoint}?${params.toString()}`;
 
-    const cameras = res.data || [];
-    console.log(`[List] 共获取 ${cameras.length} 个摄像头`);
-    return cameras;
+      const res = await this.get<CameraListResponse>(url, true);
+
+      if (res.code !== 0 && res.code !== undefined) {
+        throw new Error(`获取列表失败: ${res.msg || JSON.stringify(res)}`);
+      }
+
+      const pageData = res.data || [];
+      allCameras.push(...pageData);
+
+      if (total === 0) {
+        total = res.total || 0;
+      }
+
+      if (pageData.length === 0 || pageData.length < pageSize) {
+        break;
+      }
+
+      current++;
+    } while (allCameras.length < total);
+
+    console.log(`[List] 共获取 ${allCameras.length} 个摄像头 (total: ${total})`);
+    return allCameras;
   }
 
   async refreshCamera(cameraId: string): Promise<void> {
@@ -134,13 +167,15 @@ export class CameraApi {
     };
 
     console.log(`[Refresh] 正在刷新摄像头: ${cameraId}`);
-    const res = await this.post<RefreshResponse>(url, body, true);
+    const res = await this.post<RefreshResult[]>(url, body, true);
 
-    if (res.code !== 0 && res.code !== undefined) {
-      throw new Error(`刷新失败: ${res.msg || JSON.stringify(res)}`);
+    const result = res.find((item) => item[cameraId] !== undefined);
+    const status = result?.[cameraId];
+    if (status === undefined) {
+      console.warn(`[Refresh] 刷新返回异常: ${JSON.stringify(res)}`);
+    } else {
+      console.log(`[Refresh] 刷新成功: ${cameraId}, 状态: ${status}`);
     }
-
-    console.log(`[Refresh] 刷新成功: ${cameraId}`);
   }
 }
 
