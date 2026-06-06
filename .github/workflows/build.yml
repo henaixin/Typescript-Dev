@@ -1,12 +1,11 @@
 name: Build Multi-Platform Binaries
 
 on:
-on:
   push:
     branches: [ main, refresh-camera ]
   pull_request:
     branches: [ main, refresh-camera ]
-    
+
 jobs:
   changes:
     runs-on: ubuntu-latest
