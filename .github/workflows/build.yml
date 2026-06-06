@@ -114,13 +114,34 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build Docker image (linux/amd64, linux/arm64)
+    - name: Build Docker image (linux/amd64)
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfile
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
         push: false
+        tags: typescript-demo:linux-amd64
+        outputs: type=docker,dest=typescript-demo-linux-amd64.tar
+
+    - name: Build Docker image (linux/arm64)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        platforms: linux/arm64
+        push: false
+        tags: typescript-demo:linux-arm64
+        outputs: type=docker,dest=typescript-demo-linux-arm64.tar
+
+    - name: Upload Docker image artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-images
+        path: |
+          typescript-demo-linux-amd64.tar
+          typescript-demo-linux-arm64.tar
+        if-no-files-found: error
 
   release:
     needs: build
