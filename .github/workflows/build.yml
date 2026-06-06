@@ -7,7 +7,25 @@ on:
     branches: [ main ]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ steps.filter.outputs.src }}
+      dockerfile: ${{ steps.filter.outputs.dockerfile }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          src:
+            - 'src/**'
+          dockerfile:
+            - 'Dockerfile'
+
   build:
+    needs: changes
+    if: needs.changes.outputs.src == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -83,9 +101,9 @@ jobs:
         if-no-files-found: error
 
   docker:
-    needs: build
+    needs: changes
+    if: needs.changes.outputs.dockerfile == 'true'
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
     - uses: actions/checkout@v4
