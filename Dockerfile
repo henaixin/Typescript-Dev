@@ -59,4 +59,6 @@ RUN mkdir -p /app && chown -R "${APP_UID}:${APP_GID}" /app
 
 USER ${APP_USER}
 
+
+# 设置工作目录
 WORKDIR /app
