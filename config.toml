@@ -1,7 +1,7 @@
 # 摄像头自动刷新配置
 
 [api]
-base_url = "http://183.196.85.67:11016"
+base_url = "http://ip:8081"
 # 认证接口
 auth_endpoint = "/openapi/mc/v1/authenticate"
 # 摄像头列表接口
@@ -18,3 +18,7 @@ app_secret = "app_secret 填写你的app_secret"
 interval_ms = 2000
 # 分页大小
 total_count = 20
+# 大循环间隔，单位毫秒（默认 3600000ms = 1小时）
+loop_interval_ms = 3600000
+# 每轮最多轮询次数（只要有离线的就继续轮询，最多 N 次）
+max_rounds = 3

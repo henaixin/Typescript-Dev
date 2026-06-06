@@ -16,6 +16,8 @@ export interface AppConfig {
   refresh: {
     interval_ms: number;
     total_count: number;
+    loop_interval_ms: number;
+    max_rounds: number;
   };
 }
 
@@ -33,6 +35,8 @@ const DEFAULT_CONFIG: AppConfig = {
   refresh: {
     interval_ms: 2000,
     total_count: 20,
+    loop_interval_ms: 3600000,
+    max_rounds: 3,
   },
 };
 
