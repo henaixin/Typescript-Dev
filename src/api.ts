@@ -37,7 +37,8 @@ export interface CameraListResponse {
 }
 
 export interface RefreshResult {
-  [cameraId: string]: number;
+  id?: number;
+  // [cameraId: string]: number;
 }
 
 export class CameraApi {
@@ -171,9 +172,7 @@ export class CameraApi {
 
     console.log(`[Refresh] 正在刷新摄像头: ${cameraId}`);
     const res = await this.post<RefreshResult[]>(url, body, true);
-
-    const result = res.find((item) => item[cameraId] !== undefined);
-    const status = result?.[cameraId];
+    const status = res;
     if (status === undefined) {
       console.warn(`[Refresh] 刷新返回异常: ${JSON.stringify(res)}`);
     } else {
