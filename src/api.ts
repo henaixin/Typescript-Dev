@@ -1,6 +1,7 @@
 import { AppConfig } from './config';
 
 export interface AuthResponse {
+  accessToken?: string;
   data?: {
     token?: string;
   };
@@ -85,9 +86,14 @@ export class CameraApi {
       throw new Error(`认证失败: ${res.msg || JSON.stringify(res)}`);
     }
 
-    const token = res.data?.token;
+    let token = res.accessToken || res.data?.token;
     if (!token) {
       throw new Error('认证接口未返回 token');
+    }
+
+    // 如果 token 带有 userToken= 前缀，提取纯 token 值用于 Authorization
+    if (token.startsWith('userToken=')) {
+      token = token.slice('userToken='.length);
     }
 
     this.token = token;
