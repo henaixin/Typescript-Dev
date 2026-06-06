@@ -1,19 +1,62 @@
-# 通用二进制运行基础镜像
-# 基于 Alpine Linux，体积小巧
-# 不包含任何具体文件，需通过 docker-compose / docker run 挂载
+# syntax=docker/dockerfile:1
+# ============================================================
+# 通用 Node.js 二进制应用基础镜像
+# 支持 Alpine / Debian-Slim / Ubuntu 等多种基础镜像
+# ============================================================
 
-FROM alpine:3.20
+ARG BASE_IMAGE=alpine:3.20
+ARG APP_UID=1000
+ARG APP_GID=1000
+ARG APP_USER=appuser
+ARG APP_GROUP=appgroup
 
-# 安装基本 CA 证书（程序可能需要 HTTPS 请求）和时区数据
-RUN apk add --no-cache ca-certificates tzdata && \
-    rm -rf /var/cache/apk/*
+FROM ${BASE_IMAGE}
 
-# 创建工作目录
+# OCI 镜像元数据
+LABEL org.opencontainers.image.title="typescript-demo" \
+      org.opencontainers.image.description="Generic base image for pkg-packaged Node.js binaries" \
+      org.opencontainers.image.source="https://github.com/OWNER/REPO"
+
+# --------------------------------------------------
+# 安装运行时依赖（自动适配 Alpine / Debian 系）
+# --------------------------------------------------
+RUN set -eux; \
+    if command -v apk >/dev/null 2>&1; then \
+        # Alpine: 安装 CA 证书、时区、以及 glibc 兼容层
+        # pkg 打包的 Node 二进制默认基于 glibc，在 musl 环境需 libc6-compat / gcompat
+        apk add --no-cache ca-certificates tzdata libc6-compat gcompat; \
+        rm -rf /var/cache/apk/*; \
+    elif command -v apt-get >/dev/null 2>&1; then \
+        # Debian / Ubuntu
+        apt-get update; \
+        apt-get install -y --no-install-recommends ca-certificates tzdata; \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
 WORKDIR /app
 
-# 创建非 root 用户（安全最佳实践）
-RUN addgroup -g 1000 appgroup && \
-    adduser -u 1000 -G appgroup -s /bin/sh -D appuser
+# --------------------------------------------------
+# 创建非 root 用户（自动适配 Alpine / Debian 语法）
+# --------------------------------------------------
+ARG APP_UID
+ARG APP_GID
+ARG APP_USER
+ARG APP_GROUP
 
-# 切换到非 root 用户
-USER appuser
+RUN set -eux; \
+    if command -v addgroup >/dev/null 2>&1 && command -v adduser >/dev/null 2>&1; then \
+        # Alpine 风格
+        addgroup -g "${APP_GID}" "${APP_GROUP}" 2>/dev/null || true; \
+        adduser -u "${APP_UID}" -G "${APP_GROUP}" -s /bin/sh -D "${APP_USER}" 2>/dev/null || true; \
+    else \
+        # Debian / Ubuntu 风格
+        groupadd -g "${APP_GID}" "${APP_GROUP}" 2>/dev/null || true; \
+        useradd -u "${APP_UID}" -g "${APP_GID}" -s /bin/sh -m "${APP_USER}" 2>/dev/null || true; \
+    fi
+
+# 创建工作目录并设置权限
+RUN mkdir -p /app && chown -R "${APP_UID}:${APP_GID}" /app
+
+USER ${APP_USER}
+
+WORKDIR /app
