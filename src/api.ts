@@ -106,11 +106,14 @@ export class CameraApi {
     }
 
     if (token.startsWith('userToken=')) {
-      token = token.slice('userToken='.length);
+         this.token = token;
+         console.log('[Auth] Token 获取成功');
+      // token = token.slice('userToken='.length);
+    }else{
+      throw new Error('认证接口返回的 token 格式错误');
     }
 
-    this.token = token;
-    console.log('[Auth] Token 获取成功');
+ 
   }
 
   async getCameraList(): Promise<CameraItem[]> {
