@@ -47,6 +47,9 @@ export class CameraApi {
 
   constructor(config: AppConfig) {
     this.config = config;
+    if (config.api.reject_unauthorized === false) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    }
   }
 
   private buildHeaders(auth = false): Record<string, string> {
@@ -60,31 +63,41 @@ export class CameraApi {
     return headers;
   }
 
+  private async request<T>(url: string, init: RequestInit): Promise<T> {
+    const timeoutMs = this.config.api.timeout_ms || 30000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, {
+        ...init,
+        headers: init.headers,
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      return (await res.json()) as T;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   private async get<T>(url: string, auth = false): Promise<T> {
-    const res = await fetch(url, {
+    return this.request<T>(url, {
       method: 'GET',
       headers: this.buildHeaders(auth),
     });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-
-    return (await res.json()) as T;
   }
 
   private async post<T>(url: string, body: unknown, auth = false): Promise<T> {
-    const res = await fetch(url, {
+    return this.request<T>(url, {
       method: 'POST',
       headers: this.buildHeaders(auth),
       body: JSON.stringify(body),
     });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-
-    return (await res.json()) as T;
   }
 
   async authenticate(): Promise<void> {

@@ -8,6 +8,8 @@ export interface AppConfig {
     auth_endpoint: string;
     list_endpoint: string;
     refresh_endpoint: string;
+    timeout_ms?: number;
+    reject_unauthorized?: boolean;
   };
   auth: {
     app_id: string;
@@ -27,6 +29,8 @@ const DEFAULT_CONFIG: AppConfig = {
     auth_endpoint: '/openapi/mc/v1/authenticate',
     list_endpoint: '/openapi/usm/v1/camera/list',
     refresh_endpoint: '/openapi/usm/v1/camera/refresh',
+    timeout_ms: 30000,
+    reject_unauthorized: false,
   },
   auth: {
     app_id: 'qmPIEPfgYILb',
