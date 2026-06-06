@@ -1,0 +1,15 @@
+# 摄像头点位自动刷新工具配置文件
+
+# 服务端地址
+baseUrl = "192.168.100.2"
+port = 8081
+
+# 认证信息
+appId = "qmPIEPfgYILb"
+appSecret = "UFzoFNTLT3CZvWGqmSVPGyq9"
+
+# 每个点位刷新间隔（毫秒），默认 2000ms = 2s
+refreshIntervalMs = 2000
+
+# 获取摄像头列表时每页条数
+pageSize = 100
