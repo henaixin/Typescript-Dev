@@ -1,0 +1,20 @@
+# 摄像头自动刷新配置
+
+[api]
+base_url = "http://192.168.100.2:8081"
+# 认证接口
+auth_endpoint = "/openapi/mc/v1/authenticate"
+# 摄像头列表接口
+list_endpoint = "/openapi/usm/v1/camera/list"
+# 刷新点位接口
+refresh_endpoint = "/openapi/usm/v1/camera/refresh"
+
+[auth]
+app_id = "qmPIEPfgYILb"
+app_secret = "UFzoFNTLT3CZvWGqmSVPGyq9"
+
+[refresh]
+# 每个点位刷新间隔，单位毫秒（默认 2000ms = 2s）
+interval_ms = 2000
+# 分页大小
+total_count = 20

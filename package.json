@@ -15,18 +15,28 @@
     "package:linux": "npm run package:linux-x64 && npm run package:linux-arm64",
     "package:current": "pkg . --output build/typescript-demo"
   },
-  "keywords": ["typescript", "demo", "cross-platform"],
+  "keywords": [
+    "typescript",
+    "demo",
+    "cross-platform"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "pkg": {
     "assets": [],
-    "targets": ["node18"],
+    "targets": [
+      "node18"
+    ],
     "outputPath": "build"
   },
   "devDependencies": {
+    "@types/iarna__toml": "^2.0.5",
     "@types/node": "^25.9.1",
     "pkg": "^5.8.1",
     "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@iarna/toml": "^2.2.5"
   }
 }
