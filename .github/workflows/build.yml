@@ -32,6 +32,7 @@ jobs:
     needs: changes
     # if: github.event_name == 'release' || needs.changes.outputs.src == 'true'
     if: github.event_name == 'release'
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
