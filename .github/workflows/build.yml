@@ -186,7 +186,7 @@ jobs:
         cp artifacts/docker-images/typescript-demo-linux-arm64.tar release/env/
         # 复制 docker-compose.yaml
         cp docker-compose.yaml release/
-        cp config.yaml release/
+        cp config.toml release/
         # 列出最终结构
         echo "Release package structure:"
         find release -type f | sort
