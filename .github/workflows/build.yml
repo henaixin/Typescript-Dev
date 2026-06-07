@@ -30,8 +30,8 @@ jobs:
 
   build:
     needs: changes
-    if: github.event_name == 'release' || needs.changes.outputs.src == 'true'
-    runs-on: ${{ matrix.os }}
+    # if: github.event_name == 'release' || needs.changes.outputs.src == 'true'
+    if: github.event_name == 'release'
     strategy:
       fail-fast: false
       matrix:
@@ -107,7 +107,8 @@ jobs:
 
   docker:
     needs: changes
-    if: github.event_name == 'release' || needs.changes.outputs.dockerfile == 'true'
+    # if: github.event_name == 'release' || needs.changes.outputs.dockerfile == 'true'
+    if: github.event_name == 'release' 
     runs-on: ubuntu-latest
 
     steps:
