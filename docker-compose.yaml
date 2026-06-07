@@ -19,6 +19,7 @@ x-common: &common
   working_dir: /app
   volumes:
     - ./bin:/app      # 将宿主机 bin/ 目录映射到容器 /app
+    - ./config.toml:/app/config.toml:ro  # 将配置文件映射到容器，设置为只读
   environment:
     - TZ=Asia/Shanghai
   # 如需暴露端口（程序未来扩展网络功能时），取消下面注释并修改端口号：
