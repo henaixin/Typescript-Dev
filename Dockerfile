@@ -57,8 +57,7 @@ RUN set -eux; \
 # 创建工作目录并设置权限
 RUN mkdir -p /app && chown -R "${APP_UID}:${APP_GID}" /app
 
-USER ${APP_USER}
-
+USER ${APP_UID}:${APP_GID}
 
 # 设置工作目录
 WORKDIR /app
