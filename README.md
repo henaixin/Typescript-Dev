@@ -1,11 +1,12 @@
 # TypeScript 项目开发示例
 
-这是一个完整的 TypeScript 项目示例，支持多平台打包（Windows、macOS、Linux）。
+这是一个完整的 TypeScript 项目示例，支持多平台打包（Windows、macOS、Linux），并可通过 Docker Compose 一键部署。
 
 ## 环境要求
 
 - Node.js (推荐使用 nvm 管理)
 - npm 或 yarn
+- Docker 与 Docker Compose（容器化部署时）
 
 ## 快速开始
 
@@ -57,13 +58,20 @@ npm install
 
 ```
 typescript_stady/
-├── src/              # TypeScript 源代码
-│   └── index.ts      # 主入口文件
-├── dist/             # 编译后的 JavaScript 代码
-├── build/            # 打包后的可执行文件
-├── package.json      # 项目配置
-├── tsconfig.json     # TypeScript 配置
-└── README.md         # 项目文档
+├── src/                    # TypeScript 源代码
+│   └── index.ts            # 主入口文件
+├── dist/                   # 编译后的 JavaScript 代码
+├── build/                  # 本地打包后的可执行文件
+├── bin/                    # 部署时放置可执行文件的目录（Docker 挂载用）
+├── env/                    # 预构建的 Docker 镜像 tar 包
+├── Dockerfile              # Docker 镜像构建文件
+├── docker-compose.yaml     # Docker Compose 部署配置
+├── .github/workflows/      # GitHub Actions 工作流
+│   └── build.yml           # 多平台自动构建与 Release 打包
+├── package.json            # 项目配置
+├── tsconfig.json           # TypeScript 配置
+├── README.md               # 项目文档
+└── TypeScript-运维.md      # 运维与扩展指南
 ```
 
 ## 开发命令
@@ -88,18 +96,18 @@ npm run start
 
 ## 多平台打包
 
-本项目使用 `pkg` 工具将 Node.js 应用打包为可执行文件。
+本项目使用 `pkg` 工具将 Node.js 应用打包为原生可执行文件。
 
 ### ⚠️ 重要说明
 
-**pkg 工具需要在目标操作系统上进行构建**：
+**本地打包时，pkg 工具需要在目标操作系统上进行构建**：
 - 在 Windows 环境下只能构建 Windows 版本
 - 在 macOS 环境下只能构建 macOS 版本
 - 在 Linux 环境下只能构建 Linux 版本
 
-如需构建所有平台的二进制文件，请在相应的操作系统上运行对应的打包命令。
+如需一次性构建所有平台的二进制文件，推荐使用下方的 **GitHub Actions 自动构建**。
 
-### 打包命令
+### 本地打包命令
 
 - **Windows (x64)** - 在 Windows 环境运行：
   ```bash
@@ -128,11 +136,9 @@ npm run start
 
 打包后的文件将保存在 `build/` 目录下。
 
-## 打包说明
-
 ### pkg 配置
 
-在 [package.json](file:///mnt/h/TypeScript_stady/package.json#L20-L24) 中配置了 pkg 的基本选项：
+在 `package.json` 中配置了 pkg 的基本选项：
 
 ```json
 "pkg": {
@@ -150,13 +156,67 @@ pkg 支持的目标格式：`node<version>-<platform>-<arch>`
 - **平台**: win, macos, linux
 - **架构**: x64, arm64
 
-### GitHub Actions 自动构建（推荐）
+## Docker Compose 部署
 
-本项目已配置 GitHub Actions 自动构建，支持在 GitHub 上自动构建所有平台的二进制文件。
+本项目支持通过 Docker Compose 使用预构建镜像运行，无需在目标机器上安装 Node.js。
 
-#### 配置文件
+### 前置准备
 
-项目已包含 `.github/workflows/build.yml`，支持以下平台：
+1. **准备可执行文件**：将对应平台的可执行文件放入 `bin/` 目录：
+   - x86_64 架构：`bin/typescript-demo-linux-amd64`
+   - ARM64  架构：`bin/typescript-demo-linux-arm64`
+
+2. **加载 Docker 镜像**（首次使用）：
+   ```bash
+   # x86_64 架构
+   docker load -i env/typescript-demo-linux-amd64.tar
+
+   # ARM64 架构
+   docker load -i env/typescript-demo-linux-arm64.tar
+   ```
+
+### 启动服务
+
+根据宿主机架构选择对应的 profile 启动：
+
+```bash
+# x86_64 架构（Intel / AMD CPU）
+docker compose --profile x64 up
+
+# ARM64 架构（Apple Silicon / 树莓派 / ARM 服务器）
+docker compose --profile arm64 up
+```
+
+### 配置说明
+
+- `bin/` 目录映射到容器内的 `/app`，可执行文件从此路径启动
+- 容器配置 `stdin_open: true` 和 `tty: true`，以支持程序读取键盘输入（按回车退出）
+- 时区默认为 `Asia/Shanghai`，可在 `docker-compose.yaml` 中修改
+
+> **💡 重要提示：修改 `docker-compose.yaml` 不需要重新构建 Docker 镜像**
+>
+> 本项目使用预构建的基础镜像（`env/` 目录中的 tar 包），`docker-compose.yaml` 仅定义容器的运行参数（如环境变量、卷映射、启动命令等）。
+> - 修改 `docker-compose.yaml`（如调整时区、容器名、profile）→ **只需重启容器**：`docker compose --profile x64 restart`
+> - 更新 `bin/` 中的可执行文件 → **只需重启容器**：`docker compose --profile x64 restart`
+> - 只有 `Dockerfile` 变更时才需要重新构建镜像
+
+## GitHub Actions 自动构建与 Release
+
+本项目已配置完整的 CI/CD 工作流，支持自动构建、打包和发布。
+
+### 触发条件
+
+| 事件 | 行为 |
+|------|------|
+| `push` 到 `main` 分支 | 检测变更，按需构建二进制文件或镜像 |
+| `pull_request` 到 `main` | 同上进行构建验证 |
+| **发布 Release** | 触发完整构建流程，并自动打包上传 |
+
+### 工作流 Job 说明
+
+#### 1. `build` - 多平台二进制打包
+
+在以下运行器上并行构建：
 
 | 平台 | 架构 | 输出文件 |
 |------|------|----------|
@@ -165,35 +225,34 @@ pkg 支持的目标格式：`node<version>-<platform>-<arch>`
 | Windows | x64 | `typescript-demo-win-x64.exe` |
 | macOS | ARM64 | `typescript-demo-macos-arm64` |
 
-#### 使用步骤
+#### 2. `docker` - Docker 镜像构建
 
-1. **推送到 GitHub**：
+使用 `docker buildx` + QEMU 交叉编译，构建以下镜像并导出为 tar：
 
-```bash
-# 初始化 git 仓库
-git init
+- `typescript-demo:linux-amd64` → `typescript-demo-linux-amd64.tar`
+- `typescript-demo:linux-arm64` → `typescript-demo-linux-arm64.tar`
 
-# 添加所有文件
-git add .
+#### 3. `release-bundle` - Release 资源打包（仅 Release 触发）
 
-# 提交
-git commit -m "Initial commit"
+当创建 Release 时，自动执行以下操作：
 
-# 重命名分支（可选）
-git branch -M main
+1. 下载所有构建产物（4 平台可执行文件 + 2 个镜像 tar）
+2. 整理目录结构：
+   ```
+   bin/                                    # 可执行文件
+   ├── typescript-demo-linux-x64
+   ├── typescript-demo-linux-arm64
+   ├── typescript-demo-win-x64.exe
+   └── typescript-demo-macos-arm64
+   env/                                    # Docker 镜像包
+   ├── typescript-demo-linux-amd64.tar
+   └── typescript-demo-linux-arm64.tar
+   docker-compose.yaml                     # 部署配置
+   ```
+3. 打包为两种格式：`typescript-demo-release.zip` 和 `typescript-demo-release.tar.gz`
+4. 自动上传到 Release Assets
 
-# 添加远程仓库
-git remote add origin <your-github-repo-url>
-
-# 推送
-git push -u origin main
-```
-
-2. **触发自动构建**：
-
-推送到 `main` 分支后，GitHub Actions 会自动开始构建。构建完成后，可以在 GitHub 仓库的 **Actions** 标签页下载构建产物。
-
-3. **创建 Release**：
+### 手动触发 Release
 
 ```bash
 # 创建标签
@@ -203,11 +262,11 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-创建标签后，GitHub Actions 会自动创建 Release 并上传所有平台的二进制文件。
+在 GitHub 页面基于该标签创建 Release 并发布后，GitHub Actions 将自动完成剩余流程。
 
 ## TypeScript 配置
 
-项目配置位于 [tsconfig.json](file:///mnt/h/TypeScript_stady/tsconfig.json)：
+项目配置位于 `tsconfig.json`：
 
 - `target`: ES2020 - 编译目标版本
 - `module`: CommonJS - 模块系统
@@ -224,7 +283,7 @@ git push origin v1.0.0
 
 ### 修改入口文件
 
-在 [src/index.ts](file:///mnt/h/TypeScript_stady/src/index.ts) 中编写你的应用逻辑。
+在 `src/index.ts` 中编写你的应用逻辑。
 
 ### 安装额外的依赖
 
@@ -245,13 +304,19 @@ source ~/.bashrc  # 或 source ~/.zshrc
 
 ### TypeScript 编译错误
 
-检查 [tsconfig.json](file:///mnt/h/TypeScript_stady/tsconfig.json) 配置是否正确，确保所有依赖都已安装。
+检查 `tsconfig.json` 配置是否正确，确保所有依赖都已安装。
 
 ### pkg 打包失败
 
 - 确保 `npm run build` 成功完成
-- 检查 [package.json](file:///mnt/h/TypeScript_stady/package.json) 中的 `bin` 字段是否指向正确的入口文件
+- 检查 `package.json` 中的 `bin` 字段是否指向正确的入口文件
 - 确保有足够的磁盘空间
+
+### Docker 容器启动后立刻退出
+
+- 确认 `bin/` 目录下已放入对应平台的可执行文件
+- 确认已执行 `docker load -i env/xxx.tar` 加载镜像
+- 检查 `docker-compose.yaml` 中的 `command` 路径是否与实际文件名一致
 
 ## 许可证
 

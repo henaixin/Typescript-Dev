@@ -5,9 +5,12 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  release:
+    types: [published]
 
 jobs:
   changes:
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     outputs:
       src: ${{ steps.filter.outputs.src }}
@@ -20,12 +23,14 @@ jobs:
         filters: |
           src:
             - 'src/**'
+            - 'package*.json'
+            - 'tsconfig.json'
           dockerfile:
             - 'Dockerfile'
 
   build:
     needs: changes
-    if: needs.changes.outputs.src == 'true'
+    if: github.event_name == 'release' || needs.changes.outputs.src == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -66,7 +71,7 @@ jobs:
     - name: Verify build output (Linux/macOS)
       if: runner.os != 'Windows'
       run: ls -la dist/
-      
+
     - name: Verify build output (Windows)
       if: runner.os == 'Windows'
       run: dir dist\
@@ -74,7 +79,7 @@ jobs:
     - name: Create directories (Linux/macOS)
       if: runner.os != 'Windows'
       run: mkdir -p build .pkg-cache
-      
+
     - name: Create directories (Windows)
       if: runner.os == 'Windows'
       run: New-Item -ItemType Directory -Path build, .pkg-cache -Force
@@ -102,7 +107,7 @@ jobs:
 
   docker:
     needs: changes
-    if: needs.changes.outputs.dockerfile == 'true'
+    if: github.event_name == 'release' || needs.changes.outputs.dockerfile == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -143,25 +148,54 @@ jobs:
           typescript-demo-linux-arm64.tar
         if-no-files-found: error
 
-  release:
-    needs: build
+  release-bundle:
+    needs: [build, docker]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    
+    if: github.event_name == 'release'
+
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Download all artifacts
+
+    - name: Download binary artifacts
       uses: actions/download-artifact@v4
       with:
-        path: build
-    
-    - name: Create Release
+        path: artifacts
+        pattern: build-*
+        merge-multiple: false
+
+    - name: Download Docker image artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-images
+        path: artifacts/docker-images
+
+    - name: Organize release files
+      run: |
+        mkdir -p release/bin release/env
+        # 将各平台可执行文件放入 bin/
+        cp artifacts/build-linux-x64/typescript-demo-linux-x64 release/bin/
+        cp artifacts/build-linux-arm64/typescript-demo-linux-arm64 release/bin/
+        cp artifacts/build-win-x64/typescript-demo-win-x64.exe release/bin/
+        cp artifacts/build-macos-arm64/typescript-demo-macos-arm64 release/bin/
+        # 将镜像 tar 放入 env/
+        cp artifacts/docker-images/typescript-demo-linux-amd64.tar release/env/
+        cp artifacts/docker-images/typescript-demo-linux-arm64.tar release/env/
+        # 复制 docker-compose.yaml
+        cp docker-compose.yaml release/
+        # 列出最终结构
+        echo "Release package structure:"
+        find release -type f | sort
+
+    - name: Create release archives
+      run: |
+        cd release
+        zip -r ../typescript-demo-release.zip .
+        tar czf ../typescript-demo-release.tar.gz .
+
+    - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          build/build-linux-x64/typescript-demo-linux-x64
-          build/build-linux-arm64/typescript-demo-linux-arm64
-          build/build-win-x64/typescript-demo-win-x64.exe
-          build/build-macos-arm64/typescript-demo-macos-arm64
+          typescript-demo-release.zip
+          typescript-demo-release.tar.gz
         generate_release_notes: true

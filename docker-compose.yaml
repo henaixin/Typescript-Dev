@@ -2,21 +2,23 @@ version: "3.9"
 
 # ================================================================
 # 使用说明：
-#   1. 确保镜像已通过 docker load / docker pull 加载到本地
-#   2. 根据宿主机架构修改下方 image 字段为你的镜像名
-#   3. 根据宿主机架构选择对应的 profile 启动：
+#   1. 首次使用前，需加载对应架构的预构建镜像：
+#      - x86_64 架构：docker load -i env/typescript-demo-linux-amd64.tar
+#      - ARM64  架构：docker load -i env/typescript-demo-linux-arm64.tar
+#   2. 根据宿主机架构选择对应的 profile 启动：
 #      - x86_64 架构：docker compose --profile x64 up
 #      - ARM64  架构：docker compose --profile arm64 up
-#   4. 如需修改时区、容器名等，直接编辑本文件对应字段
+#   3. 如需修改时区、容器名等，直接编辑本文件对应字段
 # ================================================================
 
 x-common: &common
-  # 请替换为实际加载的镜像名称
-  image: typescript-demo:latest
   container_name: typescript-demo
   restart: always
   stdin_open: true   # 对应 -i，保持 stdin 打开（程序需要读取键盘输入）
   tty: true          # 对应 -t，分配伪终端
+  working_dir: /app
+  volumes:
+    - ./bin:/app      # 将宿主机 bin/ 目录映射到容器 /app
   environment:
     - TZ=Asia/Shanghai
   # 如需暴露端口（程序未来扩展网络功能时），取消下面注释并修改端口号：
@@ -27,25 +29,25 @@ services:
   # ========================================================
   # Profile: x64（x86_64 架构：Intel/AMD CPU 的 Linux/Mac/Windows）
   # 用法：docker compose --profile x64 up
+  # 镜像来源：env/typescript-demo-linux-amd64.tar
+  # 可执行文件路径：bin/typescript-demo-linux-amd64
   # ========================================================
   app-x64:
     <<: *common
+    image: typescript-demo:linux-amd64
+    command: /app/typescript-demo-linux-amd64
     profiles:
       - x64
-    volumes:
-      # 左侧为宿主机上的二进制文件路径，右侧为容器内挂载路径（只读）
-      - ./build/typescript-demo-linux-x64:/app/app:ro
-    command: ["/app/app"]
 
   # ========================================================
   # Profile: arm64（ARM64 架构：Apple Silicon Mac、树莓派、ARM 服务器等）
   # 用法：docker compose --profile arm64 up
+  # 镜像来源：env/typescript-demo-linux-arm64.tar
+  # 可执行文件路径：bin/typescript-demo-linux-arm64
   # ========================================================
   app-arm64:
     <<: *common
+    image: typescript-demo:linux-arm64
+    command: /app/typescript-demo-linux-arm64
     profiles:
       - arm64
-    volumes:
-      # 左侧为宿主机上的二进制文件路径，右侧为容器内挂载路径（只读）
-      - ./build/typescript-demo-linux-arm64:/app/app:ro
-    command: ["/app/app"]
