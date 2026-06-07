@@ -10,7 +10,7 @@ on:
 
 jobs:
   changes:
-    if: github.event_name != 'release'
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     outputs:
       src: ${{ steps.filter.outputs.src }}
