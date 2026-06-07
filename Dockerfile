@@ -4,7 +4,7 @@
 # 支持 Alpine / Debian-Slim / Ubuntu 等多种基础镜像
 # ============================================================
 
-ARG BASE_IMAGE=alpine:3.20
+ARG BASE_IMAGE=debian:bookworm-slim
 ARG APP_UID=1000
 ARG APP_GID=1000
 ARG APP_USER=appuser
@@ -22,14 +22,14 @@ LABEL org.opencontainers.image.title="typescript-demo" \
 # --------------------------------------------------
 RUN set -eux; \
     if command -v apk >/dev/null 2>&1; then \
-        # Alpine: 安装 CA 证书、时区、以及 glibc 兼容层
+        # Alpine: 安装 CA 证书、时区、glibc 兼容层，以及 pkg 运行时依赖
         # pkg 打包的 Node 二进制默认基于 glibc，在 musl 环境需 libc6-compat / gcompat
-        apk add --no-cache ca-certificates tzdata libc6-compat gcompat; \
+        apk add --no-cache ca-certificates tzdata libc6-compat gcompat libstdc++ libgcc; \
         rm -rf /var/cache/apk/*; \
     elif command -v apt-get >/dev/null 2>&1; then \
         # Debian / Ubuntu
         apt-get update; \
-        apt-get install -y --no-install-recommends ca-certificates tzdata; \
+        apt-get install -y --no-install-recommends ca-certificates tzdata libstdc++6 libgcc1; \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
